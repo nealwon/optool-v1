@@ -148,11 +148,11 @@ func printSample() {
 	fmt.Print(`server:
   default_group: web
   default_port: 22
-    hosts:
-      vm:
-        - 172.16.80.129
-      router:
-        - 192.168.11.1
+  hosts:
+	vm:
+	  - 172.16.80.129
+	router:
+	  - 192.168.11.1
 auth:
   user: root
   password: {my password}
