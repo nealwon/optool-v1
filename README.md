@@ -9,9 +9,9 @@ Usage:
   -config string
         set config file path (default "/deployer.yml")
   -g string
-        set hosts group name
+        set default group name for hosts
   -gz
-        enable gzip for transfer.remote host must has executable: /usr/bin/gzip
+        enable gzip for transfer./usr/bin/gzip must be executable at remote host
   -host string
         set run host
   -key string
@@ -27,7 +27,7 @@ Usage:
   -t string
         set tagged command
   -ta string
-        append tagged command parameters, overflow params will dropped,params separated by comma(,).
+        append tagged command parameters, overflow params will be dropped, separated by comma(,).
          to replace in tags use string: _REPLACE_
   -tl
         list all tags
@@ -35,7 +35,7 @@ Usage:
         print tag line
   -u string
         set ssh auth user
-  -v    verbose all configures
+  -v    verbose all configs
   -x string
         execute command directly
 ```

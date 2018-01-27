@@ -25,11 +25,11 @@ const (
 var (
 	pConfigFile   = flag.String("config", "/deployer.yml", "set config file path")
 	pTag          = flag.String("t", "", "set tagged command")
-	pTagArgs      = flag.String("ta", "", "append tagged command parameters, overflow params will dropped,params separated by comma(,).\n\t to replace in tags use string: _REPLACE_")
+	pTagArgs      = flag.String("ta", "", "append tagged command parameters, overflow params will be dropped, separated by comma(,).\n\t to replace in tags use string: _REPLACE_")
 	pTagPrint     = flag.Bool("tp", false, "print tag line")
 	pTagList      = flag.Bool("tl", false, "list all tags")
-	pGzip         = flag.Bool("gz", false, "enable gzip for transfer.remote host must has executable: /usr/bin/gzip")
-	pGroup        = flag.String("g", "", "set hosts group name")
+	pGzip         = flag.Bool("gz", false, "enable gzip for transfer./usr/bin/gzip must be executable at remote host")
+	pGroup        = flag.String("g", "", "set default group name for hosts")
 	pUser         = flag.String("u", "", "set ssh auth user")
 	pOutput       = flag.String("o", "-", "set output file")
 	pCommand      = flag.String("x", "", "execute command directly")
@@ -38,7 +38,7 @@ var (
 	pHost         = flag.String("host", "", "set run host")
 	pPort         = flag.Int("port", 0, "set default ssh port")
 	pPrivateKey   = flag.String("key", "", "set private key")
-	pVerbose      = flag.Bool("v", false, "verbose all configures")
+	pVerbose      = flag.Bool("v", false, "verbose all configs")
 	pSampleConfig = flag.Bool("V", false, "print sample configure")
 )
 
