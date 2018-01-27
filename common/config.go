@@ -50,27 +50,3 @@ func ParseConfig(f string) error {
 	}
 	return nil
 }
-
-/**
-server:
-    default_group: web
-    default_port: 22
-    hosts:
-        web:
-            - 172.16.80.129
-        ow:
-            - 192.168.11.1
-        adm:
-            - 106.75.60.188
-auth:
-    user: root
-    password: pwds
-    private_key: /opt/keys/pk.pem
-    private_key_content: ""
-    private_key_phrase: ""
-    plain_password: true
-tags:
-    ps: "/bin/ps"
-    netstat: "/bin/netstat -lntpu"
-    err: "/bin/grep ERROR /data/tmp/phalcon-admin.log_REPLACE_"
-*/
