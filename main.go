@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
@@ -14,6 +15,12 @@ import (
 
 // REPLACEMENT variable to replace by args
 const REPLACEMENT = "_REPLACE_"
+const (
+	// NoHeader no output/error header
+	NoHeader = 1 << 0
+	//NoServer no server ip line
+	NoServer = 1 << 1
+)
 
 var (
 	pConfigFile   = flag.String("config", "/deployer.yml", "set config file path")
@@ -25,9 +32,9 @@ var (
 	pGroup        = flag.String("g", "", "set hosts group name")
 	pUser         = flag.String("u", "", "set ssh auth user")
 	pOutput       = flag.String("o", "-", "set output file")
-	pCommand      = flag.String("c", "", "direct run command")
-	pNoHeader     = flag.Bool("nh", false, "no header output")
-	pNoHost       = flag.Bool("ns", false, "no server ip output")
+	pCommand      = flag.String("x", "", "execute command directly")
+	pScript       = flag.String("s", "", "read commands from script")
+	pNoHeader     = flag.Int("nh", 0, "(1)1<<0=no header,(2)1<<1=no server ip,3=none")
 	pHost         = flag.String("host", "", "set run host")
 	pPort         = flag.Int("port", 0, "set default ssh port")
 	pPrivateKey   = flag.String("key", "", "set private key")
@@ -113,10 +120,20 @@ func main() {
 			}
 		}
 	}
+	// direct command
 	if cmd == "" {
 		if *pCommand != "" {
 			cmd = *pCommand
 		}
+	}
+
+	// script
+	if *pScript != "" {
+		script, err := ioutil.ReadFile(*pScript)
+		if err != nil {
+			log.Fatalln("Script: ", err)
+		}
+		cmd = string(script)
 	}
 	if cmd == "" {
 		log.Fatal("Command cannot be empty")
@@ -141,7 +158,7 @@ func main() {
 	if err := rc.Start(); err != nil {
 		log.Fatalln(err)
 	}
-	rc.PrettyPrint(wo, os.Stderr, !*pNoHeader, !*pNoHost)
+	rc.PrettyPrint(wo, os.Stderr, (*pNoHeader&NoHeader) > 0, (*pNoHeader&NoServer) > 0)
 }
 
 func printSample() {

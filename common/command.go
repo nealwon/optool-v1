@@ -155,17 +155,17 @@ func (rc *RemoteCommand) ClosePipe() {
 }
 
 // PrettyPrint print output and errors
-func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, withHeader bool, withHost bool) {
-	if len(rc.Error) > 0 && withHost {
-		if withHeader {
-			we.Write([]byte("================================= ERROR ================================="))
+func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, noHost bool) {
+	if len(rc.Error) > 0 && !noHost {
+		if !noHeader {
+			we.Write([]byte("================================= ERROR =================================\n"))
 		}
 		for h, e := range rc.Error {
 			fmt.Fprintln(we, h, "\n", e)
 		}
 	}
 	if len(rc.Output) > 0 {
-		if withHeader {
+		if !noHeader {
 			fmt.Fprintln(wo, "================================= OUTPUT =================================")
 		}
 		for h, o := range rc.Output {
@@ -180,14 +180,14 @@ func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, withHeader bool
 				if err != nil {
 					log.Println(err)
 				}
-				if withHost {
+				if !noHost {
 					wo.Write([]byte(h + ": \n"))
 				}
 				wo.Write(data)
 				wo.Write([]byte("\n"))
 				continue
 			}
-			if withHost {
+			if !noHost {
 				wo.Write([]byte(h + ": \n"))
 			}
 			wo.Write([]byte(o))
