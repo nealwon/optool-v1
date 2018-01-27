@@ -1,4 +1,4 @@
-# deployer
+# optool
 A tool to execute commands on multiple remote hosts
 
 ------------
@@ -7,7 +7,7 @@ A tool to execute commands on multiple remote hosts
 Usage:
   -V    print sample configure
   -config string
-        set config file path (default "/deployer.yml")
+        set config file path (default "/optool.yml")
   -g string
         set default group name for hosts
   -gz

@@ -1,22 +1,22 @@
-// +build: darwin
 package common
 
 import "runtime"
 
+// ConfigFileList read config file one by one if not exists
 var ConfigFileList = []string{
-	"./deployer.yml",
-	"~/deployer.yml",
-	"/etc/deployer.yml",
-	"/tmp/deployer.yml",
+	"./optool.yml",
+	"~/optool.yml",
+	"/etc/optool.yml",
+	"/tmp/optool.yml",
 }
 
 func init() {
 	if runtime.GOOS == "windows" {
 		ConfigFileList = []string{
-			"./deployer.yml",
-			"%USERPROFILE%/deployer.yml",
-			"C:/deployer.yml",
-			"D:/deployer.yml",
+			"./optool.yml",
+			"%USERPROFILE%/optool.yml",
+			"C:/optool.yml",
+			"D:/optool.yml",
 		}
 	}
 }

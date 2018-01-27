@@ -161,7 +161,7 @@ func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, 
 			we.Write([]byte("================================= ERROR =================================\n"))
 		}
 		for h, e := range rc.Error {
-			fmt.Fprintln(we, h, "\n", e)
+			fmt.Fprintln(we, h, ":\n", e)
 		}
 	}
 	if len(rc.Output) > 0 {

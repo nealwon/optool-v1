@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-yaml/yaml"
-	"github.com/nealwon/deployer/common"
+	"github.com/nealwon/optool/common"
 )
 
 // REPLACEMENT variable to replace by args
@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	pConfigFile   = flag.String("config", "/deployer.yml", "set config file path")
+	pConfigFile   = flag.String("config", "/optool.yml", "set config file path")
 	pTag          = flag.String("t", "", "set tagged command")
 	pTagArgs      = flag.String("ta", "", "append tagged command parameters, overflow params will be dropped, separated by comma(,).\n\t to replace in tags use string: _REPLACE_")
 	pTagPrint     = flag.Bool("tp", false, "print tag line")
