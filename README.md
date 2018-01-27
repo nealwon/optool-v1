@@ -43,7 +43,7 @@ Usage:
 ### Sample configure:
 ```yaml
 server:
-  default_group: web
+  default_group: vm
   default_port: 22
   hosts:
     vm:
