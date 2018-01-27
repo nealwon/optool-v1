@@ -61,24 +61,30 @@ func (rc *RemoteCommand) Start() error {
 	}
 	if C.Auth.User != "" {
 		cfg.User = C.Auth.User
-		if _, err := os.Stat(C.Auth.PrivateKey); err != nil {
-			return err
-		}
-		key, err := ioutil.ReadFile(C.Auth.PrivateKey)
-		if err != nil {
-			return err
-		}
-		var signer ssh.Signer
-		if C.Auth.PrivateKeyPhrase == "" {
-			signer, err = ssh.ParsePrivateKey(key)
+		if C.Auth.PrivateKey != "" {
+			if _, err := os.Stat(C.Auth.PrivateKey); err != nil {
+				return err
+			}
+			key, err := ioutil.ReadFile(C.Auth.PrivateKey)
+			if err != nil {
+				return err
+			}
+			var signer ssh.Signer
+			if C.Auth.PrivateKeyPhrase == "" {
+				signer, err = ssh.ParsePrivateKey(key)
+			} else {
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(C.Auth.PrivateKeyPhrase))
+			}
+			if err != nil {
+				return err
+			}
+			cfg.Auth = []ssh.AuthMethod{
+				ssh.PublicKeys(signer),
+			}
 		} else {
-			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(C.Auth.PrivateKeyPhrase))
-		}
-		if err != nil {
-			return err
-		}
-		cfg.Auth = []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
+			cfg.Auth = []ssh.AuthMethod{
+				ssh.Password(C.Auth.Password),
+			}
 		}
 	}
 	for _, host := range rc.Hosts {

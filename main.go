@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/go-yaml/yaml"
@@ -35,6 +36,7 @@ var (
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
 	if *pSampleConfig {
 		printSample()
@@ -51,7 +53,7 @@ func main() {
 	}
 
 	if err = common.ParseConfig(*pConfigFile); err != nil {
-		log.Fatalln(err)
+		log.Fatalln("ParseConfig: ", err)
 	}
 	// tag list,print,arg parse
 	if *pTagList {
@@ -69,7 +71,7 @@ func main() {
 	if *pOutput != "-" {
 		wo, err = os.OpenFile(*pOutput, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatalln("Open output: ", err)
 		}
 		defer wo.Close()
 	}
