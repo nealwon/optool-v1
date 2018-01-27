@@ -6,8 +6,6 @@ A tool to execute commands on multiple remote hosts
 ```bash
 Usage:
   -V    print sample configure
-  -c string
-        direct run command
   -config string
         set config file path (default "/deployer.yml")
   -g string
@@ -18,14 +16,14 @@ Usage:
         set run host
   -key string
         set private key
-  -nh
-        no header output
-  -ns
-        no server ip output
+  -nh int
+        (1)1<<0=no header,(2)1<<1=no server ip,3=none
   -o string
         set output file (default "-")
   -port int
         set default ssh port
+  -s string
+        read commands from script
   -t string
         set tagged command
   -ta string
@@ -38,6 +36,8 @@ Usage:
   -u string
         set ssh auth user
   -v    verbose all configures
+  -x string
+        execute command directly
 ```
 
 ### Sample configure:
