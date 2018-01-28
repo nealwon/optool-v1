@@ -44,12 +44,17 @@ var (
 	pVerbose      = flag.Bool("v", false, "verbose all configs")
 	pSampleConfig = flag.Bool("V", false, "print sample configure")
 	pVersion      = flag.Bool("version", false, "print version and exit")
+	pEncrypt      = flag.Bool("encrypt", false, "encrypt a password/phrase")
 )
 
 func main() {
 	flag.Parse()
 	if *pVersion {
 		fmt.Println("Opstool", OptoolVersion)
+		os.Exit(0)
+	}
+	if *pEncrypt {
+		doEncryption()
 		os.Exit(0)
 	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -196,4 +201,18 @@ tags:
   netstat: "/bin/netstat -lntpu"
   err: "/bin/grep ERROR /var/log/nginx/error.log_REPLACE_"
 `)
+}
+
+func doEncryption() {
+	var str string
+	var restr string
+	fmt.Printf("   Input string:")
+	fmt.Scanln(&str)
+	fmt.Printf("Re-input string:")
+	fmt.Scanln(&restr)
+	if str != restr {
+		fmt.Println("Your input mismatch.")
+		os.Exit(1)
+	}
+	fmt.Println(string(common.Encrypt(str)))
 }

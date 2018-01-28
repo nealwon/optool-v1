@@ -59,6 +59,10 @@ func (rc *RemoteCommand) Start() error {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         time.Second * 10,
 	}
+	password := C.Auth.Password
+	if !C.Auth.PlainPassword {
+		password = string(Decrypt(C.Auth.Password))
+	}
 	if C.Auth.User != "" {
 		cfg.User = C.Auth.User
 		if C.Auth.PrivateKey != "" {
@@ -73,7 +77,11 @@ func (rc *RemoteCommand) Start() error {
 			if C.Auth.PrivateKeyPhrase == "" {
 				signer, err = ssh.ParsePrivateKey(key)
 			} else {
-				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(C.Auth.PrivateKeyPhrase))
+				passphrase := []byte(C.Auth.PrivateKeyPhrase)
+				if !C.Auth.PlainPassword {
+					passphrase = Decrypt(C.Auth.PrivateKeyPhrase)
+				}
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, passphrase)
 			}
 			if err != nil {
 				return err
@@ -81,12 +89,12 @@ func (rc *RemoteCommand) Start() error {
 			cfg.Auth = []ssh.AuthMethod{
 				ssh.PublicKeys(signer),
 			}
-			if C.Auth.Password != "" {
-				cfg.Auth = append(cfg.Auth, ssh.Password(C.Auth.Password))
+			if password != "" {
+				cfg.Auth = append(cfg.Auth, ssh.Password(password))
 			}
 		} else {
 			cfg.Auth = []ssh.AuthMethod{
-				ssh.Password(C.Auth.Password),
+				ssh.Password(password),
 			}
 		}
 	}
