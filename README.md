@@ -8,6 +8,8 @@ Usage:
   -V    print sample configure
   -config string
         set config file path (default "/optool.yml")
+  -encrypt
+        encrypt a password/phrase
   -g string
         set default group name for hosts
   -gz
@@ -36,6 +38,8 @@ Usage:
   -u string
         set ssh auth user
   -v    verbose all configs
+  -version
+        print version and exit
   -x string
         execute command directly
 ```

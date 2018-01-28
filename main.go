@@ -23,7 +23,7 @@ const (
 )
 
 // OptoolVersion define current version
-const OptoolVersion = "v0.2"
+const OptoolVersion = "v0.2.1beta"
 
 var (
 	pConfigFile   = flag.String("config", "/optool.yml", "set config file path")
