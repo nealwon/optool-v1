@@ -22,6 +22,9 @@ const (
 	NoServer = 1 << 1
 )
 
+// OptoolVersion define current version
+const OptoolVersion = "v0.1"
+
 var (
 	pConfigFile   = flag.String("config", "/optool.yml", "set config file path")
 	pTag          = flag.String("t", "", "set tagged command")
@@ -40,11 +43,16 @@ var (
 	pPrivateKey   = flag.String("key", "", "set private key")
 	pVerbose      = flag.Bool("v", false, "verbose all configs")
 	pSampleConfig = flag.Bool("V", false, "print sample configure")
+	pVersion      = flag.Bool("version", false, "print version and exit")
 )
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
+	if *pVersion {
+		fmt.Println("Opstool", OptoolVersion)
+		os.Exit(0)
+	}
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	if *pSampleConfig {
 		printSample()
 		os.Exit(0)
@@ -52,7 +60,11 @@ func main() {
 	var err error
 	if _, err = os.Stat(*pConfigFile); err != nil {
 		for _, cf := range common.ConfigFileList {
-			if _, err = os.Stat(cf); err == nil {
+			_, err = os.Stat(cf)
+			if *pVerbose {
+				fmt.Println(cf, err)
+			}
+			if err == nil {
 				*pConfigFile = cf
 				break
 			}
@@ -163,7 +175,7 @@ func main() {
 
 func printSample() {
 	fmt.Print(`server:
-  default_group: web
+  default_group: vm
   default_port: 22
   hosts:
 	vm:
