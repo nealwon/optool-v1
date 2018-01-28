@@ -81,6 +81,9 @@ func (rc *RemoteCommand) Start() error {
 			cfg.Auth = []ssh.AuthMethod{
 				ssh.PublicKeys(signer),
 			}
+			if C.Auth.Password != "" {
+				cfg.Auth = append(cfg.Auth, ssh.Password(C.Auth.Password))
+			}
 		} else {
 			cfg.Auth = []ssh.AuthMethod{
 				ssh.Password(C.Auth.Password),
