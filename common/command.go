@@ -1,12 +1,12 @@
 package common
 
 import (
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,48 +54,16 @@ func NewRemoteCommand(hosts []string, cmd string) *RemoteCommand {
 }
 
 // Start run remote command
-func (rc *RemoteCommand) Start() error {
+func (rc *RemoteCommand) Start() (err error) {
 	cfg := &ssh.ClientConfig{
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         time.Second * 10,
 	}
-	password := C.Auth.Password
-	if !C.Auth.PlainPassword {
-		password = string(Decrypt(C.Auth.Password))
-	}
 	if C.Auth.User != "" {
 		cfg.User = C.Auth.User
-		if C.Auth.PrivateKey != "" {
-			if _, err := os.Stat(C.Auth.PrivateKey); err != nil {
-				return err
-			}
-			key, err := ioutil.ReadFile(C.Auth.PrivateKey)
-			if err != nil {
-				return err
-			}
-			var signer ssh.Signer
-			if C.Auth.PrivateKeyPhrase == "" {
-				signer, err = ssh.ParsePrivateKey(key)
-			} else {
-				passphrase := []byte(C.Auth.PrivateKeyPhrase)
-				if !C.Auth.PlainPassword {
-					passphrase = Decrypt(C.Auth.PrivateKeyPhrase)
-				}
-				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, passphrase)
-			}
-			if err != nil {
-				return err
-			}
-			cfg.Auth = []ssh.AuthMethod{
-				ssh.PublicKeys(signer),
-			}
-			if password != "" {
-				cfg.Auth = append(cfg.Auth, ssh.Password(password))
-			}
-		} else {
-			cfg.Auth = []ssh.AuthMethod{
-				ssh.Password(password),
-			}
+		cfg.Auth, err = GetAuth()
+		if err != nil {
+			return err
 		}
 	}
 	for _, host := range rc.Hosts {
@@ -172,7 +140,11 @@ func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, 
 			we.Write([]byte("================================= ERROR =================================\n"))
 		}
 		for h, e := range rc.Error {
-			fmt.Fprintln(we, h, ":\n", e)
+			if strings.Contains(e, "\n") {
+				fmt.Fprintln(we, h, ":\n", e)
+			} else {
+				fmt.Fprintln(we, h, ":", e)
+			}
 		}
 	}
 	if len(rc.Output) > 0 {
@@ -192,14 +164,20 @@ func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, 
 					log.Println(err)
 				}
 				if !noHost {
-					wo.Write([]byte(h + ": \n"))
+					wo.Write([]byte(h + ": "))
+					if bytes.Contains(data, []byte("\n")) {
+						wo.Write([]byte("\n"))
+					}
 				}
 				wo.Write(data)
 				wo.Write([]byte("\n"))
 				continue
 			}
 			if !noHost {
-				wo.Write([]byte(h + ": \n"))
+				wo.Write([]byte(h + ": "))
+				if strings.Contains(o, "\n") {
+					wo.Write([]byte("\n"))
+				}
 			}
 			wo.Write([]byte(o))
 			wo.Write([]byte("\n"))

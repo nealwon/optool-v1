@@ -2,6 +2,9 @@ package common
 
 import (
 	"io/ioutil"
+	"os"
+
+	"golang.org/x/crypto/ssh"
 
 	"github.com/go-yaml/yaml"
 )
@@ -25,6 +28,8 @@ type Configure struct {
 	Gzip bool              `yaml:"-"`    // enable gzip transfer
 	//DefaultGroup string              `yaml:"default_group"` // set default host group
 }
+
+// Server server groups and default port/group config
 type Server struct {
 	DefaultGroup string              `yaml:"default_group"`
 	DefaultPort  int                 `yaml:"default_port"`
@@ -49,4 +54,45 @@ func ParseConfig(f string) error {
 		return err
 	}
 	return nil
+}
+
+// GetAuth get auth method list from configs
+func GetAuth() (auth []ssh.AuthMethod, err error) {
+	password := C.Auth.Password
+	if !C.Auth.PlainPassword {
+		password = string(Decrypt(C.Auth.Password))
+	}
+	if C.Auth.PrivateKey != "" {
+		if _, err := os.Stat(C.Auth.PrivateKey); err != nil {
+			return nil, err
+		}
+		key, err := ioutil.ReadFile(C.Auth.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
+		var signer ssh.Signer
+		if C.Auth.PrivateKeyPhrase == "" {
+			signer, err = ssh.ParsePrivateKey(key)
+		} else {
+			passphrase := []byte(C.Auth.PrivateKeyPhrase)
+			if !C.Auth.PlainPassword {
+				passphrase = Decrypt(C.Auth.PrivateKeyPhrase)
+			}
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, passphrase)
+		}
+		if err != nil {
+			return nil, err
+		}
+		auth = []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		}
+		if password != "" {
+			auth = append(auth, ssh.Password(password))
+		}
+	} else {
+		auth = []ssh.AuthMethod{
+			ssh.Password(password),
+		}
+	}
+	return
 }

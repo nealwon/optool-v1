@@ -47,9 +47,14 @@ var (
 	pSampleConfig = flag.Bool("V", false, "print sample configure")
 	pVersion      = flag.Bool("version", false, "print version and exit")
 	pEncrypt      = flag.Bool("encrypt", false, "encrypt a password/phrase")
+	//@todo
+	pGet  = flag.String("get", "", "get a file from remote host")
+	pPut  = flag.String("put", "", "put a file to remote host")
+	pPath = flag.String("path", "", "set path.if get is set this is local path,if put is set this is remote path")
 )
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Llongfile)
 	flag.Parse()
 	if *pVersion {
 		fmt.Println("Opstool", OptoolVersion)
@@ -129,6 +134,23 @@ func main() {
 		common.C.Auth.PrivateKey = *pPrivateKey
 		common.C.Auth.PrivateKeyPhrase = ""
 	}
+	// Get/Put files
+	if *pGet != "" && *pPut != "" {
+		log.Fatalln("Get or put cannot be set at once")
+	}
+	var transfer *common.Transfer
+	if *pGet != "" {
+		transfer = common.NewTransfer(common.TransferGet, *pPath, *pGet, hosts)
+	} else if *pPut != "" {
+		transfer = common.NewTransfer(common.TransferPut, *pPut, *pPath, hosts)
+	}
+	if transfer.Inited {
+		if err = transfer.Start(); err != nil {
+			log.Fatalln(err)
+		}
+		transfer.PrettyPrint()
+		os.Exit(0)
+	}
 	// command
 	var cmd string
 	if *pTag != "" {
@@ -162,6 +184,10 @@ func main() {
 		log.Fatalln("Parameter is not enough. Required is", toReplaceCount)
 	}
 	for i := 0; i < toReplaceCount; i++ {
+		// - stands for skip this args
+		if tagArgs[i] == "-" {
+			tagArgs[i] = ""
+		}
 		cmd = strings.Replace(cmd, REPLACEMENT, tagArgs[i], 1)
 	}
 	if *pVerbose {
