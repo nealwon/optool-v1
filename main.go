@@ -8,9 +8,11 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/go-yaml/yaml"
 	"github.com/nealwon/optool/common"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // REPLACEMENT variable to replace by args
@@ -207,12 +209,20 @@ func doEncryption() {
 	var str string
 	var restr string
 	fmt.Printf("   Input string:")
-	fmt.Scanln(&str)
-	fmt.Printf("Re-input string:")
-	fmt.Scanln(&restr)
+	p, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	str = string(p)
+	fmt.Printf("\nRe-input string:")
+	rp, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	restr = string(rp)
 	if str != restr {
-		fmt.Println("Your input mismatch.")
+		fmt.Println("\nYour input mismatch.")
 		os.Exit(1)
 	}
-	fmt.Println(string(common.Encrypt(str)))
+	fmt.Println("\n      Encrypted:", string(common.Encrypt(str)))
 }
