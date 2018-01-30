@@ -139,7 +139,9 @@ func main() {
 	if *pGet != "" && *pPut != "" {
 		log.Fatalln("Get or put cannot be set at once")
 	}
-	var transfer *common.Transfer
+	transfer := &common.Transfer{
+		Inited: false,
+	}
 	if *pGet != "" {
 		transfer = common.NewTransfer(common.TransferGet, *pPath, *pGet, hosts)
 	} else if *pPut != "" {
