@@ -26,29 +26,41 @@ const (
 
 // Transfer transfer files via ssh
 type Transfer struct {
-	Inited     bool
-	Method     string // GET,PUT
-	LocalPath  string
-	RemotePath string
-	Recursive  bool
-	Hosts      []string
-	Clients    map[string]*ssh.Client
-	SftpClient map[string]*sftp.Client
-	Override   bool // override remote existed file?
+	Inited         bool
+	Method         string // GET,PUT
+	LocalPath      string
+	RemotePath     string
+	Recursive      bool
+	Hosts          []string
+	Clients        map[string]*ssh.Client
+	SftpClient     map[string]*sftp.Client
+	Override       bool                    // override remote existed file?
+	TransferResult map[string]FileTransfer // result of transfering
+	Lock           sync.Mutex
+}
+
+// FileTransfer transfer file info
+type FileTransfer struct {
+	Source string
+	Target string
+	Size   int64
+	Elapse time.Duration
 }
 
 // NewTransfer get file transfer instance
 func NewTransfer(method, localPath, remotePath string, hosts []string) *Transfer {
 	return &Transfer{
-		Inited:     true,
-		Method:     method,
-		LocalPath:  localPath,
-		RemotePath: remotePath,
-		Recursive:  false,
-		Clients:    make(map[string]*ssh.Client),
-		SftpClient: make(map[string]*sftp.Client),
-		Hosts:      hosts,
-		Override:   false,
+		Inited:         true,
+		Method:         method,
+		LocalPath:      localPath,
+		RemotePath:     remotePath,
+		Recursive:      false,
+		Clients:        make(map[string]*ssh.Client),
+		SftpClient:     make(map[string]*sftp.Client),
+		Hosts:          hosts,
+		Override:       false,
+		TransferResult: make(map[string]FileTransfer),
+		Lock:           sync.Mutex{},
 	}
 }
 
@@ -112,15 +124,16 @@ func (t *Transfer) batchPut() (err error) {
 		return errors.New("Local is dir,recursive transfer not supported now")
 	}
 	wg := sync.WaitGroup{}
-	for _, sc := range t.SftpClient {
+	for h, sc := range t.SftpClient {
+		c := t.Clients[h]
 		wg.Add(1)
-		go func(sc *sftp.Client) {
+		go func(sc *sftp.Client, c *ssh.Client) {
 			defer wg.Done()
-			err := t.put(sc, t.LocalPath, t.RemotePath)
+			err := t.put(sc, c, t.LocalPath, t.RemotePath)
 			if err != nil {
 				fmt.Println(err)
 			}
-		}(sc)
+		}(sc, c)
 	}
 	wg.Wait()
 	return
@@ -145,7 +158,6 @@ func (t *Transfer) get(sc *sftp.Client, c *ssh.Client, remotePath, localPath str
 	defer srcFile.Close()
 	addr := c.Conn.RemoteAddr().String()
 	xaddr := strings.Split(addr, ":")
-	addr = strings.Replace(xaddr[0], ".", "-", -1)
 	exp := strings.Split(basename, ".")
 	var ext, prefName string
 	lenth := len(exp)
@@ -155,22 +167,34 @@ func (t *Transfer) get(sc *sftp.Client, c *ssh.Client, remotePath, localPath str
 	} else {
 		prefName = basename
 	}
-	dstFile, err := os.OpenFile(path.Join(localPath, prefName+"-"+addr+"."+ext), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	dstFile, err := os.OpenFile(path.Join(localPath, prefName+"-"+strings.Replace(xaddr[0], ".", "-", -1)+"."+ext), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
 		return
 	}
 	defer dstFile.Close()
+	ft := FileTransfer{
+		Source: srcFile.Name(),
+		Target: dstFile.Name(),
+	}
+	ts := time.Now()
 	buf := make([]byte, 1024)
+	var size int64
 	for {
 		n, _ := srcFile.Read(buf)
 		if n < 1 {
 			break
 		}
+		size = size + int64(n)
 		dstFile.Write(buf[0:n])
 	}
+	ft.Size = size
+	ft.Elapse = time.Now().Sub(ts)
+	t.Lock.Lock()
+	t.TransferResult[addr] = ft
+	t.Lock.Unlock()
 	return
 }
-func (t *Transfer) put(sc *sftp.Client, localPath, remotePath string) (err error) {
+func (t *Transfer) put(sc *sftp.Client, c *ssh.Client, localPath, remotePath string) (err error) {
 	// remote path is dir
 	if strings.HasSuffix(remotePath, "/") {
 		basename := path.Base(localPath)
@@ -193,14 +217,27 @@ func (t *Transfer) put(sc *sftp.Client, localPath, remotePath string) (err error
 		return
 	}
 	defer dstFile.Close()
+	ft := FileTransfer{
+		Source: srcFile.Name(),
+		Target: dstFile.Name(),
+	}
+	ts := time.Now()
+	var size int64
 	buf := make([]byte, 1024)
 	for {
 		n, _ := srcFile.Read(buf)
 		if n < 1 {
 			break
 		}
+		size = size + int64(n)
 		dstFile.Write(buf[0:n])
 	}
+	ft.Size = size
+	ft.Elapse = time.Now().Sub(ts)
+	addr := c.Conn.RemoteAddr().String()
+	t.Lock.Lock()
+	t.TransferResult[addr] = ft
+	t.Lock.Unlock()
 	return
 }
 
@@ -233,4 +270,8 @@ func (t *Transfer) initClient() error {
 }
 
 // PrettyPrint print transfer result
-func (t *Transfer) PrettyPrint() {}
+func (t *Transfer) PrettyPrint() {
+	for h, ft := range t.TransferResult {
+		fmt.Printf("%21s: %s => %s %dByte %.2f seconds\n", h, ft.Source, ft.Target, ft.Size, ft.Elapse.Seconds())
+	}
+}

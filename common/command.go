@@ -140,6 +140,7 @@ func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, 
 			we.Write([]byte("================================= ERROR =================================\n"))
 		}
 		for h, e := range rc.Error {
+			e = strings.TrimRight(e, "\n")
 			if strings.Contains(e, "\n") {
 				fmt.Fprintln(we, h, ":\n", e)
 			} else {
@@ -163,8 +164,9 @@ func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, 
 				if err != nil {
 					log.Println(err)
 				}
+				data = bytes.TrimRight(data, "\n")
 				if !noHost {
-					wo.Write([]byte(h + ": "))
+					fmt.Fprintf(wo, "%15s: ", h)
 					if bytes.Contains(data, []byte("\n")) {
 						wo.Write([]byte("\n"))
 					}
@@ -173,8 +175,9 @@ func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, 
 				wo.Write([]byte("\n"))
 				continue
 			}
+			o = strings.TrimRight(o, "\n")
 			if !noHost {
-				wo.Write([]byte(h + ": "))
+				fmt.Fprintf(wo, "%15s: ", h)
 				if strings.Contains(o, "\n") {
 					wo.Write([]byte("\n"))
 				}
