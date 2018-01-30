@@ -8,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -51,6 +52,9 @@ func NewTransfer(method, localPath, remotePath string, hosts []string) *Transfer
 
 // Start start file transfer
 func (t *Transfer) Start() (err error) {
+	if err = t.initClient(); err != nil {
+		return
+	}
 	// close connections
 	defer func() {
 		for _, sc := range t.SftpClient {
@@ -60,9 +64,6 @@ func (t *Transfer) Start() (err error) {
 			c.Close()
 		}
 	}()
-	if err = t.initClient(); err != nil {
-		return
-	}
 	if t.Method == TransferGet {
 		return t.batchGet()
 	}
@@ -73,9 +74,27 @@ func (t *Transfer) Start() (err error) {
 }
 
 func (t *Transfer) batchGet() (err error) {
-	for _, sc := range t.SftpClient {
-		go t.get(sc, t.RemotePath, t.LocalPath)
+	fi, err := os.Stat(t.LocalPath)
+	if err != nil {
+		err = os.MkdirAll(t.LocalPath, 0755)
+		if err != nil {
+			return
+		}
+	} else {
+		if !fi.IsDir() {
+			log.Fatalln("Local path cannot be a file")
+		}
 	}
+	wg := sync.WaitGroup{}
+	for h, sc := range t.SftpClient {
+		c := t.Clients[h]
+		wg.Add(1)
+		go func(sc *sftp.Client, c *ssh.Client) {
+			defer wg.Done()
+			t.get(sc, c, t.RemotePath, t.LocalPath)
+		}(sc, c)
+	}
+	wg.Wait()
 	return
 }
 
@@ -87,23 +106,64 @@ func (t *Transfer) batchPut() (err error) {
 	if fi.IsDir() {
 		return errors.New("Local is dir,recursive transfer not supported now")
 	}
+	wg := sync.WaitGroup{}
 	for _, sc := range t.SftpClient {
-		go func() {
+		wg.Add(1)
+		go func(sc *sftp.Client) {
+			defer wg.Done()
 			err := t.put(sc, t.LocalPath, t.RemotePath)
 			fmt.Println(err)
-		}()
+		}(sc)
 	}
 	return
 }
 
-func (t *Transfer) get(sc *sftp.Client, remotePath, localPath string) (err error) {
+func (t *Transfer) get(sc *sftp.Client, c *ssh.Client, remotePath, localPath string) (err error) {
+	fi, err := sc.Stat(remotePath)
+	if err != nil {
+		return
+	}
+	if fi.IsDir() {
+		return errors.New("Remote dir get is not supported")
+	}
+	basename := path.Base(fi.Name())
+	srcFile, err := sc.Open(remotePath)
+	if err != nil {
+		return
+	}
+	defer srcFile.Close()
+	addr := c.Conn.RemoteAddr().String()
+	xaddr := strings.Split(addr, ":")
+	addr = strings.Replace(xaddr[0], ".", "-", -1)
+	exp := strings.Split(basename, ".")
+	var ext, prefName string
+	lenth := len(exp)
+	if lenth > 1 {
+		ext = exp[lenth-1]
+		prefName = strings.Join(exp[0:lenth-1], ".")
+	} else {
+		prefName = basename
+	}
+	dstFile, err := os.OpenFile(path.Join(localPath, prefName+"-"+addr+"."+ext), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return
+	}
+	defer dstFile.Close()
+	buf := make([]byte, 1024)
+	for {
+		n, _ := srcFile.Read(buf)
+		if n < 1 {
+			break
+		}
+		dstFile.Write(buf[0:n])
+	}
 	return
 }
 func (t *Transfer) put(sc *sftp.Client, localPath, remotePath string) (err error) {
 	// remote path is dir
 	if strings.HasSuffix(remotePath, "/") {
 		basename := path.Base(localPath)
-		remotePath = remotePath + basename
+		remotePath = path.Join(remotePath, basename)
 	}
 	_, e := sc.Stat(remotePath)
 	if e == nil {
@@ -153,7 +213,7 @@ func (t *Transfer) initClient() error {
 			return err
 		}
 		t.Clients[h] = client
-		t.SftpClient[h], err = sftp.NewClient(client)
+		t.SftpClient[h], err = sftp.NewClient(client, sftp.MaxPacket(33788))
 		if err != nil {
 			return err
 		}
