@@ -48,9 +48,10 @@ var (
 	pVersion      = flag.Bool("version", false, "print version and exit")
 	pEncrypt      = flag.Bool("encrypt", false, "encrypt a password/phrase")
 	//@todo
-	pGet  = flag.String("get", "", "get a file from remote host")
-	pPut  = flag.String("put", "", "put a file to remote host")
-	pPath = flag.String("path", "", "set path.if get is set this is local path,if put is set this is remote path")
+	pGet      = flag.String("get", "", "get a file from remote host")
+	pPut      = flag.String("put", "", "put a file to remote host")
+	pPath     = flag.String("path", "", "set path.if get is set this is local path,if put is set this is remote path")
+	pOverride = flag.Bool("override", false, "Override remote file if exists")
 )
 
 func main() {
@@ -145,6 +146,12 @@ func main() {
 		transfer = common.NewTransfer(common.TransferPut, *pPut, *pPath, hosts)
 	}
 	if transfer.Inited {
+		if common.C.TransferMaxSize < 1 {
+			common.C.TransferMaxSize = common.TransferDefaultMaxSize
+		}
+		if *pOverride {
+			transfer.Override = true
+		}
 		if err = transfer.Start(); err != nil {
 			log.Fatalln(err)
 		}

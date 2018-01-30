@@ -27,6 +27,7 @@ type Configure struct {
 	Tags map[string]string `yaml:"tags"` // shortcut for frequently used commands
 	Gzip bool              `yaml:"-"`    // enable gzip transfer
 	//DefaultGroup string              `yaml:"default_group"` // set default host group
+	TransferMaxSize int64 `yaml:"transfer_max_size"`
 }
 
 // Server server groups and default port/group config

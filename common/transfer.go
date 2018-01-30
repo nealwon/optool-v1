@@ -20,6 +20,8 @@ const (
 	TransferGet = "GET"
 	// TransferPut put file to remote servers
 	TransferPut = "PUT"
+	// TransferDefaultMaxSize default max size to transfer
+	TransferDefaultMaxSize = 1099511627776 // 100MB
 )
 
 // Transfer transfer files via ssh
@@ -91,7 +93,10 @@ func (t *Transfer) batchGet() (err error) {
 		wg.Add(1)
 		go func(sc *sftp.Client, c *ssh.Client) {
 			defer wg.Done()
-			t.get(sc, c, t.RemotePath, t.LocalPath)
+			err := t.get(sc, c, t.RemotePath, t.LocalPath)
+			if err != nil {
+				fmt.Println(c.Conn.RemoteAddr().String(), err)
+			}
 		}(sc, c)
 	}
 	wg.Wait()
@@ -112,9 +117,12 @@ func (t *Transfer) batchPut() (err error) {
 		go func(sc *sftp.Client) {
 			defer wg.Done()
 			err := t.put(sc, t.LocalPath, t.RemotePath)
-			fmt.Println(err)
+			if err != nil {
+				fmt.Println(err)
+			}
 		}(sc)
 	}
+	wg.Wait()
 	return
 }
 
@@ -125,6 +133,9 @@ func (t *Transfer) get(sc *sftp.Client, c *ssh.Client, remotePath, localPath str
 	}
 	if fi.IsDir() {
 		return errors.New("Remote dir get is not supported")
+	}
+	if fi.Size() > C.TransferMaxSize {
+		return fmt.Errorf("Max transfer size is set to %d", C.TransferMaxSize)
 	}
 	basename := path.Base(fi.Name())
 	srcFile, err := sc.Open(remotePath)
