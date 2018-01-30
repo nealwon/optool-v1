@@ -235,6 +235,7 @@ tags:
   ps: "/bin/ps"
   netstat: "/bin/netstat -lntpu"
   err: "/bin/grep ERROR /var/log/nginx/error.log_REPLACE_"
+# transfer_max_size: 1099511627776 #100MB
 `)
 }
 
