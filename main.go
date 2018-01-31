@@ -37,6 +37,7 @@ var (
 	pGroup        = flag.String("g", "", "set default group name for hosts")
 	pUser         = flag.String("u", "", "set ssh auth user")
 	pOutput       = flag.String("o", "-", "set output file")
+	pOutputDir    = flag.String("od", "", "output directory for command output directly to file")
 	pCommand      = flag.String("x", "", "execute command directly")
 	pScript       = flag.String("s", "", "read commands from script")
 	pNoHeader     = flag.Int("nh", 0, "(1)1<<0=no header,(2)1<<1=no server ip,3=none")
@@ -209,6 +210,7 @@ func main() {
 	// run
 	//cmd := "/bin/cat /data/tmp/phalcon-cli.log"
 	rc := common.NewRemoteCommand(hosts, cmd)
+	rc.SetOutputDir(*pOutputDir)
 	if err := rc.Start(); err != nil {
 		log.Fatalln(err)
 	}

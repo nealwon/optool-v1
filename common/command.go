@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,6 +33,8 @@ type RemoteCommand struct {
 	Output  map[string]string
 	Error   map[string]string
 	Running map[string]*ssh.Session
+
+	OutputDir string
 }
 
 // NewRemoteCommand prepare a remote execution
@@ -51,6 +55,19 @@ func NewRemoteCommand(hosts []string, cmd string) *RemoteCommand {
 		PipeError: make(map[string]io.Reader),
 		PipeChan:  make(chan bool),
 	}
+}
+
+// SetOutputDir set output dir
+func (rc *RemoteCommand) SetOutputDir(dir string) {
+	fi, err := os.Stat(rc.OutputDir)
+	if err != nil {
+		os.MkdirAll(rc.OutputDir, 0755)
+	} else {
+		if !fi.IsDir() {
+			log.Fatalln("Output is not a directory")
+		}
+	}
+	rc.OutputDir = dir
 }
 
 // Start run remote command
@@ -114,6 +131,23 @@ func (rc *RemoteCommand) execute(host string, cfg *ssh.ClientConfig) {
 		rc.wg.Done()
 		return
 	}
+	// direct output to file
+	if rc.OutputDir != "" {
+		fileName := host
+		if C.Gzip {
+			fileName = fileName + ".gz"
+		}
+		fh, err := os.OpenFile(path.Join(rc.OutputDir, fileName), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		sess.Stdout = fh
+		e = sess.Start(rc.Cmd)
+		e = sess.Wait()
+		rc.wg.Done()
+		return
+	}
 	o, e = sess.Output(rc.Cmd)
 	//L.Debugf("RemoteCommand: [%s] cmd=%s, output=%s, error=%s\n", ohost, rc.Cmd, string(o), e)
 	rc.lock.Lock()
@@ -135,6 +169,9 @@ func (rc *RemoteCommand) ClosePipe() {
 
 // PrettyPrint print output and errors
 func (rc *RemoteCommand) PrettyPrint(wo io.Writer, we io.Writer, noHeader bool, noHost bool) {
+	if rc.OutputDir != "" {
+		return
+	}
 	if len(rc.Error) > 0 && !noHost {
 		if !noHeader {
 			we.Write([]byte("================================= ERROR =================================\n"))
